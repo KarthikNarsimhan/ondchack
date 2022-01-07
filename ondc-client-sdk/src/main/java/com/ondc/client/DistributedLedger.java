@@ -4,19 +4,25 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.bigchaindb.api.AssetsApi;
 import com.bigchaindb.api.TransactionsApi;
 import com.bigchaindb.builders.BigchainDbConfigBuilder;
 import com.bigchaindb.builders.BigchainDbTransactionBuilder;
 import com.bigchaindb.constants.Operations;
+import com.bigchaindb.model.Asset;
+import com.bigchaindb.model.Assets;
 import com.bigchaindb.model.GenericCallback;
 import com.bigchaindb.model.MetaData;
 import com.bigchaindb.model.Transaction;
 import com.google.gson.internal.LinkedTreeMap;
+import com.ondc.client.utils.ConfigConstants;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;
@@ -27,14 +33,14 @@ import okhttp3.Response;
 
 /**
  * The Class DistributedLedger.
+ * 
+ * @author karthik
+ * 
  */
 public class DistributedLedger {
-	static Logger logger = Logger.getLogger(DistributedLedger.class.getName());
 
-	/** The url. */
-	// TODO externalize. In multinode deployment, get this information from a
-	// registry
-	private static String URL = "https://test.ipdb.io";
+	/** The logger. */
+	static Logger logger = Logger.getLogger(DistributedLedger.class.getName());
 
 	/** The instance. */
 	private static DistributedLedger instance;
@@ -43,7 +49,8 @@ public class DistributedLedger {
 	 * Instantiates a new distributed ledger.
 	 */
 	private DistributedLedger() {
-		BigchainDbConfigBuilder.baseUrl(URL).addToken("app_id", "").addToken("app_key", "").setup();
+		BigchainDbConfigBuilder.baseUrl(ConfigConstants.BLOCKCHAIN_DB_URL).addToken("app_id", "")
+				.addToken("app_key", "").setup();
 	}
 
 	/**
@@ -59,7 +66,7 @@ public class DistributedLedger {
 	}
 
 	/**
-	 * Write event.
+	 * Write event to the distributed ledger.
 	 *
 	 * @param event     the event
 	 * @param eventType the event type
@@ -96,8 +103,8 @@ public class DistributedLedger {
 	/**
 	 * Gets the event by id.
 	 *
-	 * @param eventId the event id
-	 * @return the event by id
+	 * @param eventId the event id returned from the writeEvent call.
+	 * @return the event
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public CloudEvent getEventById(String eventId) throws IOException {
@@ -107,11 +114,39 @@ public class DistributedLedger {
 		return JSONUtils.getCloudEvent(eventJson);
 	}
 
-	private static void writeTransaction() throws Exception {
+	/**
+	 * Gets the event by search key.
+	 *
+	 * @param searchKey the search key
+	 * @return the event by search key
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public List<CloudEvent> getEventsBySearchKey(String searchKey) throws IOException {
+		Assets assets = AssetsApi.getAssets(searchKey);
+		List<CloudEvent> events = new ArrayList<CloudEvent>();
+		for (Asset asset : assets.getAssets()) {
+			try {
+				LinkedTreeMap<String, Object> data = (LinkedTreeMap<String, Object>) asset.getData();
+				String eventJson = (String) data.get("event");
+
+				events.add(JSONUtils.getCloudEvent(eventJson));
+			} catch (Exception e) {
+				// TODO remove this after the old records are deleted
+			}
+		}
+		return events;
+	}
+
+	/**
+	 * Refence method. To be removed.
+	 *
+	 * @throws Exception the exception
+	 */
+	private static void testWriteEvent() throws Exception {
 		net.i2p.crypto.eddsa.KeyPairGenerator edDsaKpg = new net.i2p.crypto.eddsa.KeyPairGenerator();
 		KeyPair keyPair = edDsaKpg.generateKeyPair();
 		String json = "{\n" + "  \"context\": {\n"
-				+ "    \"transaction_id\": \"c2c3398a-5e18-40fa-85eb-a580c6c73b2e\",\n"
+				+ "    \"transaction_id\": \"e2c3398a-5e18-40fa-85eb-a580c6c73b2e\",\n"
 				+ "    \"bpp_id\": \"mandi.succinct.in\",\n" + "    \"domain\": \"local-retail\",\n"
 				+ "    \"bpp_uri\": \"https://mandi.succinct.in/bpp\",\n" + "    \"action\": \"confirm\",\n"
 				+ "    \"message_id\": \"012283c6-31f2-4b74-bbb3-3cf634ed2cc4\",\n" + "    \"ttl\": \"PT1M\",\n"
@@ -123,7 +158,7 @@ public class DistributedLedger {
 				+ "          \"amount\": 80\n" + "        },\n" + "        \"status\": \"PAID\"\n" + "      }\n"
 				+ "    }\n" + "  }\n" + "}";
 
-		final CloudEvent event = CloudEventBuilder.v1().withId("c2c3398a-5e18-40fa-85eb-a580c6c73b2e") // this can be
+		final CloudEvent event = CloudEventBuilder.v1().withId("e2c3398a-5e18-40fa-85eb-a580c6c73b2e") // this can be
 																										// beckn
 																										// transaction
 																										// id
@@ -158,13 +193,18 @@ public class DistributedLedger {
 		logger.log(Level.INFO, "Transaction Id: " + transactionId);
 	}
 
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 */
 	public static void main(String[] args) {
 		try {
-			logger.log(Level.INFO, DistributedLedger.instance()
-					.getEventById("91e03402c49f1b297793b29ba1c1ee8697ca881ac6026ed7a2525b1cdcc3409d").toString());
-//			writeTransaction();
+//			testWriteEvent();
+//			logger.log(Level.INFO, DistributedLedger.instance()
+//			.getEventById("91e03402c49f1b297793b29ba1c1ee8697ca881ac6026ed7a2525b1cdcc3409d").toString());
+			logger.log(Level.INFO, DistributedLedger.instance().getEventsBySearchKey("e2c3398a").toString());
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

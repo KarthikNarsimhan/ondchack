@@ -2,7 +2,7 @@ package com.ondc.client.mqtt;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,59 +11,36 @@ import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient.Mqtt5Publishes;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
+import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
+import com.ondc.client.utils.ConfigConstants;
+import com.ondc.client.utils.JSONUtils;
+
+import io.cloudevents.CloudEvent;
 
 /**
  * The Class MqttClient.
+ * @author karthik
+ * 
+ * This is an internal class. Use the MqttPublisher and MqttSubscriber classes
+ * for publish/subscribe.
  */
-public class MqttClient {
-	static Logger logger =  Logger.getLogger(MqttClient.class.getName()); 
+class MqttClient {
 
-	/** The instance. */
-	private static MqttClient instance;
+	/** The logger. */
+	static Logger logger = Logger.getLogger(MqttClient.class.getName());
 
 	/** The mqtt client. */
 	Mqtt5BlockingClient mqttClient = null;
 
-	// TODO externalize
-
-	/** The topic prefix. */
-	String TOPIC_PREFIX = "ondc/";
-	
-	/** The qos. */
-	int qos = 1;
-	
-	/** The host. */
-	static String HOST = "9a7d49f3b04d4dd98b6ce4c203cc1831.s1.eu.hivemq.cloud";
-	
-	/** The broker. */
-	static String BROKER = "ssl://" + HOST + ":8883";
-	
-	/** The user. */
-	static String user = "testpoc";
-	
-	/** The password. */
-	static String password = "Q1w2e3r4";
-
 	/**
 	 * Instantiates a new mqtt client.
 	 */
-	private MqttClient() {
-		mqttClient = com.hivemq.client.mqtt.MqttClient.builder().useMqttVersion5().serverHost(HOST).serverPort(8883)
+	MqttClient() {
+		mqttClient = Mqtt5Client.builder().serverHost(ConfigConstants.MQTT_HOST).serverPort(ConfigConstants.MQTT_PORT).identifier(UUID.randomUUID().toString())
 				.sslWithDefaultConfig().buildBlocking();
-		mqttClient.connectWith().simpleAuth().username(user).password(StandardCharsets.UTF_8.encode(password))
+		mqttClient.connectWith().simpleAuth().username(ConfigConstants.MQTT_USER).password(StandardCharsets.UTF_8.encode(ConfigConstants.MQTT_PASSWORD))
 				.applySimpleAuth().send();
-	}
-
-	/**
-	 * Gets the single instance of MqttClient.
-	 *
-	 * @return single instance of MqttClient
-	 */
-	public static MqttClient getInstance() {
-		if (instance == null)
-			instance = new MqttClient();
-
-		return instance;
+		logger.log(Level.INFO, "Connected to broker");
 	}
 
 	/**
@@ -71,7 +48,7 @@ public class MqttClient {
 	 */
 	public void disconnect() {
 		if (mqttClient != null)
-			logger.log(Level.INFO,"Disconnecting....");
+			logger.log(Level.INFO, "Disconnecting Mqtt Broker.");
 		mqttClient.disconnect();
 	}
 
@@ -82,38 +59,70 @@ public class MqttClient {
 	 * @param event the event
 	 */
 	public void publish(String topic, String event) {
-		mqttClient.publishWith().topic(TOPIC_PREFIX + topic).payload(StandardCharsets.UTF_8.encode(event)).send();
-		logger.log(Level.INFO,"published message to topic.." + event);
+		mqttClient.toAsync().publishWith().topic(topic).payload(StandardCharsets.UTF_8.encode(event)).send()
+				.whenComplete((publish, throwable) -> {
+					if (throwable != null) {
+						logger.log(Level.SEVERE, "Error publishing", throwable);
+					} else {
+						logger.log(Level.INFO, "published message to topic.." + topic);
+					}
+				});
+
 	}
 
 	/**
-	 * Subscribe.
+	 * Subscribe async.
+	 *
+	 * @param topic    the topic
+	 * @param callback the callback
+	 */
+	public void subscribeAsync(String topic, MqttCallback callback) {
+		mqttClient.toAsync().subscribeWith().topicFilter(topic).qos(MqttQos.AT_LEAST_ONCE)
+				.callback(new Consumer<Mqtt5Publish>() {
+					@Override
+					public void accept(Mqtt5Publish t) {
+						callback.receive(topic, JSONUtils.getCloudEvent(new String(t.getPayloadAsBytes())));
+					}
+				}).send().whenComplete((suback, throwable) -> {
+					if (throwable != null) {
+						logger.log(Level.SEVERE, "Error subscribing", throwable);
+					} else {
+						logger.log(Level.INFO, "subscribed message from topic.." + topic);
+					}
+				});
+	}
+
+	/**
+	 * Subscribe blocking.
 	 *
 	 * @param topic the topic
-	 * @return the string
+	 * @return the cloud event
+	 * @throws InterruptedException the interrupted exception
 	 */
-	public String subscribe(String topic) {
-
-		final Mqtt5BlockingClient client = Mqtt5Client.builder().identifier(UUID.randomUUID().toString())
-				.serverHost(HOST).serverPort(8883).sslWithDefaultConfig().buildBlocking();
-
-		client.connectWith().simpleAuth().username(user).password(StandardCharsets.UTF_8.encode(password))
-		.applySimpleAuth().send();
-
-		try (final Mqtt5Publishes publishes = client.publishes(MqttGlobalPublishFilter.ALL)) {
-
-			client.subscribeWith().topicFilter(TOPIC_PREFIX+topic).qos(MqttQos.AT_LEAST_ONCE).send();
-
-			try {
-				publishes.receive(1, TimeUnit.SECONDS).ifPresent(System.out::println);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-		} finally {
-			client.disconnect();
+	public CloudEvent subscribeBlocking(String topic) throws MqttException {
+		try (final Mqtt5Publishes publishes = mqttClient.publishes(MqttGlobalPublishFilter.ALL)) {
+			mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.AT_LEAST_ONCE).send();
+			Mqtt5Publish message = publishes.receive();
+			return JSONUtils.getCloudEvent(new String(message.getPayloadAsBytes()));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			throw new MqttException(e);
 		}
-		return "ok";
+
+	}
+
+	/**
+	 * The Interface MqttCallback.
+	 */
+	public interface MqttCallback {
+
+		/**
+		 * Receive.
+		 *
+		 * @param topic   the topic
+		 * @param event the event
+		 */
+		public void receive(String topic, CloudEvent event);
 	}
 
 }

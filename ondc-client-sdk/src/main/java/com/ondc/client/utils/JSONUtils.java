@@ -7,6 +7,8 @@ import io.cloudevents.jackson.JsonFormat;
 
 /**
  * The Class JSONUtils.
+ * @author karthik
+ * 
  */
 public class JSONUtils {
 

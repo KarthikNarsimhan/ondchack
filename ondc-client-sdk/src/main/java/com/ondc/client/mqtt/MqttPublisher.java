@@ -1,76 +1,60 @@
-package com.ondc.client;
-
+package com.ondc.client.mqtt;
 
 import java.net.URI;
 import java.util.logging.Logger;
 
-import com.ondc.client.mqtt.MqttClient;
+import com.ondc.client.EventType;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 
 /**
- * The EventHandler class.
+ * The Class MqttPublisher.
+ * @author karthik
+ * 
  */
-public class MqttEventHandler {
-	static Logger logger =  Logger.getLogger(MqttEventHandler.class.getName()); 
+public class MqttPublisher {
 
-	/** The instance. */
-	private static MqttEventHandler instance;
-	
+	/** The logger. */
+	static Logger logger = Logger.getLogger(MqttPublisher.class.getName());
+
+
 	/** The mqtt client. */
 	private MqttClient mqttClient;
 
 	/**
-	 * Instantiates a new event handler.
+	 * Instantiates a new mqtt publisher.
 	 */
-	private MqttEventHandler() {
-		mqttClient = MqttClient.getInstance();
+	public MqttPublisher() {
+		mqttClient = new MqttClient();
 	}
 
 	/**
-	 * Gets the single instance of EventHandler.
-	 *
-	 * @return single instance of EventHandler
-	 */
-	public static synchronized MqttEventHandler instance() {
-		if (instance == null)
-			instance = new MqttEventHandler();
-
-		return instance;
-	}
-
-	/**
-	 * Publish an event to the topic.
+	 * Publish an event to the topic. This will be done in async.
 	 *
 	 * @param topic the topic
 	 * @param event the event
 	 */
-	public void publish(String topic, CloudEvent event) {
+	public void publishAsync(String topic, CloudEvent event) {
 		mqttClient.publish(topic, JSONUtils.getJson(event));
 	}
 
 	/**
-	 * Subscribe for an event on a topic.
-	 *
-	 * @param topic the topic
-	 * @return the event
-	 */
-	public String subscribe(String topic) {
-		return mqttClient.subscribe(topic);
-	}
-
-	/**
-	 * Disconnect the mqtt client
+	 * Disconnect the mqtt client.
 	 */
 	public void disconnect() {
 		mqttClient.disconnect();
 	}
-	
+
+	/**
+	 * The main method.
+	 *
+	 * @param args the arguments
+	 */
 	public static void main(String[] args) {
 		String json = "{\n" + "  \"context\": {\n"
-				+ "    \"transaction_id\": \"c2c3398a-5e18-40fa-85eb-a580c6c73b2e\",\n"
+				+ "    \"transaction_id\": \"f2c3398a-5e18-40fa-85eb-a580c6c73b2e\",\n"
 				+ "    \"bpp_id\": \"mandi.succinct.in\",\n" + "    \"domain\": \"local-retail\",\n"
 				+ "    \"bpp_uri\": \"https://mandi.succinct.in/bpp\",\n" + "    \"action\": \"confirm\",\n"
 				+ "    \"message_id\": \"012283c6-31f2-4b74-bbb3-3cf634ed2cc4\",\n" + "    \"ttl\": \"PT1M\",\n"
@@ -82,8 +66,7 @@ public class MqttEventHandler {
 				+ "          \"amount\": 80\n" + "        },\n" + "        \"status\": \"PAID\"\n" + "      }\n"
 				+ "    }\n" + "  }\n" + "}";
 
-
-		final CloudEvent event = CloudEventBuilder.v1().withId("c2c3398a-5e18-40fa-85eb-a580c6c73b2e") // this can be
+		final CloudEvent event = CloudEventBuilder.v1().withId("f2c3398a-5e18-40fa-85eb-a580c6c73b2e") // this can be
 																										// beckn
 																										// transaction
 																										// id
@@ -92,11 +75,12 @@ public class MqttEventHandler {
 				.withDataSchema(URI.create("http://beckn.org/schemas/confirm.json")) // "Identifies the schema that data
 																						// adheres to."
 				.withDataContentType("application/json").withData(json.getBytes()).build();
-				
-		MqttEventHandler a= MqttEventHandler.instance();
-		a.publish("testTopic", event);
-		System.out.println(a.subscribe("testTopic"));
+
+		MqttPublisher a = new MqttPublisher();
+		a.publishAsync("testTopic1", event);
 		a.disconnect();
+		
 	}
+
 
 }
