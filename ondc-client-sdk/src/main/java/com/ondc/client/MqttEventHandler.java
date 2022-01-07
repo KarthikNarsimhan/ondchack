@@ -1,6 +1,8 @@
 package com.ondc.client;
 
+
 import java.net.URI;
+import java.util.logging.Logger;
 
 import com.ondc.client.mqtt.MqttClient;
 import com.ondc.client.utils.JSONUtils;
@@ -12,6 +14,7 @@ import io.cloudevents.core.builder.CloudEventBuilder;
  * The EventHandler class.
  */
 public class MqttEventHandler {
+	static Logger logger =  Logger.getLogger(MqttEventHandler.class.getName()); 
 
 	/** The instance. */
 	private static MqttEventHandler instance;

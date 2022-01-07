@@ -1,21 +1,22 @@
 package com.ondc.client.mqtt;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient.Mqtt5Publishes;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
-import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 
 /**
  * The Class MqttClient.
  */
 public class MqttClient {
+	static Logger logger =  Logger.getLogger(MqttClient.class.getName()); 
 
 	/** The instance. */
 	private static MqttClient instance;
@@ -70,7 +71,7 @@ public class MqttClient {
 	 */
 	public void disconnect() {
 		if (mqttClient != null)
-			System.out.println("disconnecting...");
+			logger.log(Level.INFO,"Disconnecting....");
 		mqttClient.disconnect();
 	}
 
@@ -82,7 +83,7 @@ public class MqttClient {
 	 */
 	public void publish(String topic, String event) {
 		mqttClient.publishWith().topic(TOPIC_PREFIX + topic).payload(StandardCharsets.UTF_8.encode(event)).send();
-		System.out.println("published message to topic.." + event);
+		logger.log(Level.INFO,"published message to topic.." + event);
 	}
 
 	/**

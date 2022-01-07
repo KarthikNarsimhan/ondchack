@@ -6,13 +6,17 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import com.bigchaindb.api.TransactionsApi;
 import com.bigchaindb.builders.BigchainDbConfigBuilder;
 import com.bigchaindb.builders.BigchainDbTransactionBuilder;
 import com.bigchaindb.constants.Operations;
 import com.bigchaindb.model.GenericCallback;
 import com.bigchaindb.model.MetaData;
 import com.bigchaindb.model.Transaction;
+import com.google.gson.internal.LinkedTreeMap;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;
@@ -25,6 +29,7 @@ import okhttp3.Response;
  * The Class DistributedLedger.
  */
 public class DistributedLedger {
+	static Logger logger = Logger.getLogger(DistributedLedger.class.getName());
 
 	/** The url. */
 	// TODO externalize. In multinode deployment, get this information from a
@@ -71,8 +76,8 @@ public class DistributedLedger {
 		} catch (MalformedURLException e1) {
 		}
 
-
 		Map<String, Object> assetData = new TreeMap<String, Object>();
+		assetData.put("asset_id", event.getId());
 		assetData.put("event", JSONUtils.getJson(event));
 
 		try {
@@ -89,12 +94,20 @@ public class DistributedLedger {
 	}
 
 	/**
-	 * The main method.
+	 * Gets the event by id.
 	 *
-	 * @param args the arguments
-	 * @throws Exception the exception
+	 * @param eventId the event id
+	 * @return the event by id
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public static void main(String[] args) throws Exception {
+	public CloudEvent getEventById(String eventId) throws IOException {
+		Transaction transaction = TransactionsApi.getTransactionById(eventId);
+		LinkedTreeMap<String, Object> data = (LinkedTreeMap<String, Object>) transaction.getAsset().getData();
+		String eventJson = (String) data.get("event");
+		return JSONUtils.getCloudEvent(eventJson);
+	}
+
+	private static void writeTransaction() throws Exception {
 		net.i2p.crypto.eddsa.KeyPairGenerator edDsaKpg = new net.i2p.crypto.eddsa.KeyPairGenerator();
 		KeyPair keyPair = edDsaKpg.generateKeyPair();
 		String json = "{\n" + "  \"context\": {\n"
@@ -123,13 +136,13 @@ public class DistributedLedger {
 		GenericCallback callback = new GenericCallback() {
 			@Override
 			public void transactionMalformed(Response response) {
-				System.out.println("transactionMalformed");
+				logger.log(Level.INFO, "transactionMalformed");
 			}
 
 			@Override
 			public void pushedSuccessfully(Response response) {
 				try {
-					System.out.println("pushedSuccessfully: " + new String(response.body().string()));
+					logger.log(Level.INFO, "Ledger Write Successful." + new String(response.body().string()));
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -137,12 +150,23 @@ public class DistributedLedger {
 
 			@Override
 			public void otherError(Response response) {
-				System.out.println("otherError");
-
+				logger.log(Level.SEVERE, "Ledger Write Failed.");
 			}
 		};
 
-		DistributedLedger.instance().writeEvent(event, EventType.CONFIRM, keyPair, callback);
+		String transactionId = DistributedLedger.instance().writeEvent(event, EventType.CONFIRM, keyPair, callback);
+		logger.log(Level.INFO, "Transaction Id: " + transactionId);
+	}
+
+	public static void main(String[] args) {
+		try {
+			logger.log(Level.INFO, DistributedLedger.instance()
+					.getEventById("91e03402c49f1b297793b29ba1c1ee8697ca881ac6026ed7a2525b1cdcc3409d").toString());
+//			writeTransaction();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
