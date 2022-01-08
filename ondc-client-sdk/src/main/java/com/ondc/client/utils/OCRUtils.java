@@ -43,10 +43,14 @@ public class OCRUtils {
 
 		// Request parameters and other properties.
 		List<NameValuePair> params = new ArrayList<NameValuePair>();
-		params.add(new BasicNameValuePair("url", url));
+		params.add(new BasicNameValuePair("base64Image", url));
+		params.add(new BasicNameValuePair("language", "eng"));
+		params.add(new BasicNameValuePair( "filetype","PNG"));
+
 		params.add(new BasicNameValuePair("detectOrientation", "true"));
 		params.add(new BasicNameValuePair("scale", "true"));
-		params.add(new BasicNameValuePair("OCREngine", "2"));
+		
+		params.add(new BasicNameValuePair("OCREngine", "1"));
 		try {
 			httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 		} catch (UnsupportedEncodingException e) {
