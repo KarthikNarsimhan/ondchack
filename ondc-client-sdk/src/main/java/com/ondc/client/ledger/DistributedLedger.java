@@ -1,4 +1,4 @@
-package com.ondc.client;
+package com.ondc.client.ledger;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -23,6 +23,7 @@ import com.bigchaindb.model.MetaData;
 import com.bigchaindb.model.Transaction;
 import com.google.gson.internal.LinkedTreeMap;
 import com.ondc.client.utils.ConfigConstants;
+import com.ondc.client.utils.EventType;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;

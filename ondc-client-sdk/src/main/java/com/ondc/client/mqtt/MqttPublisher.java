@@ -3,7 +3,7 @@ package com.ondc.client.mqtt;
 import java.net.URI;
 import java.util.logging.Logger;
 
-import com.ondc.client.EventType;
+import com.ondc.client.utils.EventType;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;

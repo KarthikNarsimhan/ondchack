@@ -23,5 +23,12 @@ public class ConfigConstants {
 	
 	/** The Blockchain DB endpoint. */
 	public static String BLOCKCHAIN_DB_URL = "https://test.ipdb.io";
+	
+	
+	/** The ocr url. */
+	public static String OCR_URL = "https://api.ocr.space/parse/image";
+	
+	/** The ocr api key. */
+	public static String OCR_API_KEY = "helloworld";
 
 }

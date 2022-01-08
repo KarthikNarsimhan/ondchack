@@ -1,4 +1,4 @@
-package com.ondc.client;
+package com.ondc.client.utils;
 
 /**
  * The Enum EventType.
