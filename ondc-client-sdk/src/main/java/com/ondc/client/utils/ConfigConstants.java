@@ -6,13 +6,13 @@ package com.ondc.client.utils;
 public class ConfigConstants {
 	
 	/** The Constant MQTT_PORT. */
-	public static final int MQTT_PORT = 8883;
+	public static final int MQTT_PORT = 1883; //8883;
 
 	/** The host. */
-	public static String MQTT_HOST = "9a7d49f3b04d4dd98b6ce4c203cc1831.s1.eu.hivemq.cloud";
+	public static String MQTT_HOST = "broker.hivemq.com";
 
 	/** The broker. */
-	public static String MQTT_BROKER = "ssl://" + MQTT_HOST + ":8883";
+	public static String MQTT_BROKER = "tcp://" + MQTT_HOST + ":1883";
 
 	/** The user. */
 	public static String MQTT_USER = "testpoc";

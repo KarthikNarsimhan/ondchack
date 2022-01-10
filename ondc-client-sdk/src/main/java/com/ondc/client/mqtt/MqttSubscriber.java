@@ -63,19 +63,19 @@ public class MqttSubscriber {
 		MqttSubscriber a = new MqttSubscriber();
 		try {
 			//test async subscription with call back.
-//			a.subscribeAsync("testTopic1", new MqttCallback() {
-//
-//				@Override
-//				public void receive(String topic, CloudEvent event) {
-//					System.out.println(topic);
-//					System.out.println(event);
-//
-//				}
-//			});
+			a.subscribeAsync("testTopic1", new MqttCallback() {
+
+				@Override
+				public void receive(String topic, CloudEvent event) {
+					System.out.println(topic);
+					System.out.println(event);
+
+				}
+			});
 			
 			//test blocking subscription for one time subscribe.
-			CloudEvent event = a.subscribeBlocking("testTopic1");
-			System.out.println(event);
+//			CloudEvent event = a.subscribeBlocking("testTopic1");
+//			System.out.println(event);
 			//Sleep to try multiple publish/subscribe
 			Thread.sleep(30000);
 		} catch (Exception e) {

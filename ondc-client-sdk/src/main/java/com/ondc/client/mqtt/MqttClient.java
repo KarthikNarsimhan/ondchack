@@ -37,9 +37,11 @@ class MqttClient {
 	 */
 	MqttClient() {
 		mqttClient = Mqtt5Client.builder().serverHost(ConfigConstants.MQTT_HOST).serverPort(ConfigConstants.MQTT_PORT).identifier(UUID.randomUUID().toString())
-				.sslWithDefaultConfig().buildBlocking();
-		mqttClient.connectWith().simpleAuth().username(ConfigConstants.MQTT_USER).password(StandardCharsets.UTF_8.encode(ConfigConstants.MQTT_PASSWORD))
-				.applySimpleAuth().send();
+//				.sslWithDefaultConfig()
+				.buildBlocking();
+		mqttClient.connectWith()
+//		.simpleAuth().username(ConfigConstants.MQTT_USER).password(StandardCharsets.UTF_8.encode(ConfigConstants.MQTT_PASSWORD)).applySimpleAuth()
+		.send();
 		logger.log(Level.INFO, "Connected to broker");
 	}
 
