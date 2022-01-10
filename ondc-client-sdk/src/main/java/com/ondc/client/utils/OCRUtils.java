@@ -49,7 +49,7 @@ public class OCRUtils {
 
 		params.add(new BasicNameValuePair("detectOrientation", "true"));
 		params.add(new BasicNameValuePair("scale", "true"));
-		
+
 		params.add(new BasicNameValuePair("OCREngine", "1"));
 		try {
 			httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));

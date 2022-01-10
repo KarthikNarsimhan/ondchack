@@ -3,7 +3,6 @@ package com.ondc.client.mqtt;
 import java.net.URI;
 import java.util.logging.Logger;
 
-import com.ondc.client.utils.EventType;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;
@@ -52,6 +51,7 @@ public class MqttPublisher {
 	 *
 	 * @param args the arguments
 	 */
+    /*
 	public static void main(String[] args) {
 		String json = "{\n" + "  \"context\": {\n"
 				+ "    \"transaction_id\": \"f2c3398a-5e18-40fa-85eb-a580c6c73b2e\",\n"
@@ -81,6 +81,7 @@ public class MqttPublisher {
 		a.disconnect();
 		
 	}
+    */
 
 
 }

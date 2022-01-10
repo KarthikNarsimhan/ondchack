@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.security.KeyPair;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +26,6 @@ import com.bigchaindb.model.MetaData;
 import com.bigchaindb.model.Transaction;
 import com.google.gson.internal.LinkedTreeMap;
 import com.ondc.client.utils.ConfigConstants;
-import com.ondc.client.utils.EventType;
 import com.ondc.client.utils.JSONUtils;
 
 import io.cloudevents.CloudEvent;
@@ -70,14 +72,14 @@ public class DistributedLedger {
 	 * Write event to the distributed ledger.
 	 *
 	 * @param event     the event
-	 * @param eventType the event type
-	 * @param keyPair   the key pair
 	 * @param callback  the callback
 	 * @return the string
 	 */
-	public String writeEvent(CloudEvent event, EventType eventType, KeyPair keyPair, GenericCallback callback) {
+	public String writeEvent(CloudEvent event, X509EncodedKeySpec publicKey0, PKCS8EncodedKeySpec privateKey0, GenericCallback callback) throws InvalidKeySpecException {
+		EdDSAPublicKey publickey = new EdDSAPublicKey(publicKey0);
+		EdDSAPrivateKey privateKey = new EdDSAPrivateKey(privateKey0);
 		MetaData metaData = new MetaData();
-		metaData.setMetaData("Event", eventType.name());
+		metaData.setMetaData("Event", event.getType());
 		metaData.setMetaData("ID", event.getId());
 		try {
 			metaData.setMetaData("Source", event.getSource().toURL().toString());
@@ -91,7 +93,7 @@ public class DistributedLedger {
 		try {
 			Transaction createTransaction = BigchainDbTransactionBuilder.init().addAssets(assetData, TreeMap.class)
 					.addMetaData(metaData).operation(Operations.CREATE)
-					.buildAndSign((EdDSAPublicKey) keyPair.getPublic(), (EdDSAPrivateKey) keyPair.getPrivate())
+					.buildAndSign(publickey, privateKey)
 					.sendTransaction(callback);
 
 			return createTransaction.getId();
@@ -99,6 +101,33 @@ public class DistributedLedger {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	public String writeEvent(CloudEvent event, KeyPair keyPair, GenericCallback callback) {
+		MetaData metaData = new MetaData();
+		metaData.setMetaData("Event", event.getType());
+		metaData.setMetaData("ID", event.getId());
+		try {
+			metaData.setMetaData("Source", event.getSource().toURL().toString());
+		} catch (MalformedURLException e1) {
+		}
+
+		Map<String, Object> assetData = new TreeMap<String, Object>();
+		assetData.put("asset_id", event.getId());
+		assetData.put("event", JSONUtils.getJson(event));
+		for (String name : event.getExtensionNames()){
+			metaData.setMetaData(name,String.valueOf(event.getExtension(name)));
+		}
+
+		try {
+			Transaction createTransaction = BigchainDbTransactionBuilder.init().addAssets(assetData, TreeMap.class)
+					.addMetaData(metaData).operation(Operations.CREATE)
+					.buildAndSign((EdDSAPublicKey) keyPair.getPublic(), (EdDSAPrivateKey) keyPair.getPrivate())
+					.sendTransaction(callback);
+
+			return createTransaction.getId();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
@@ -143,6 +172,7 @@ public class DistributedLedger {
 	 *
 	 * @throws Exception the exception
 	 */
+    /*
 	private static void testWriteEvent() throws Exception {
 		net.i2p.crypto.eddsa.KeyPairGenerator edDsaKpg = new net.i2p.crypto.eddsa.KeyPairGenerator();
 		KeyPair keyPair = edDsaKpg.generateKeyPair();
@@ -192,7 +222,7 @@ public class DistributedLedger {
 
 		String transactionId = DistributedLedger.instance().writeEvent(event, EventType.CONFIRM, keyPair, callback);
 		logger.log(Level.INFO, "Transaction Id: " + transactionId);
-	}
+	}*/
 
 	/**
 	 * The main method.
